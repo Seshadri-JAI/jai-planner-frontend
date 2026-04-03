@@ -24,16 +24,25 @@ export default function TVDisplay() {
     try {
       const today = new Date().toISOString().split("T")[0];
       // Fetch live metrics
-      const resLive = await fetch(`${API_BASE_URL}/live`);
+      const token = localStorage.getItem("token");
+      const resLive = await fetch(`${API}/live`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       const dataLive = await resLive.json();
       // Fetch plan vs actual table (with columns: part_number, line, mt, status, etc.)
-      const resPlan = await fetch(`${API_BASE_URL}/plan-vs-actual?date=${today}`);
+      const resPlan = await fetch(`${API}/plan-vs-actual?date=${today}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       const dataPlan = await resPlan.json();
       // Fetch customer-critical (if needed in alerts screen)
-      const resCrit = await fetch(`http://localhost:8020/planning/customer-critical?date=${today}`);
+      const resCrit = await fetch(`${API_BASE}/planning/customer-critical?date=${today}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       const dataCrit = await resCrit.json();
       // Fetch MT trend
-      const resTrend = await fetch(`${API_BASE_URL}/mt-trend`);
+      const resTrend = await fetch(`${API}/mt-trend`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       const trendData = await resTrend.json();
       
       // Convert to full month format
