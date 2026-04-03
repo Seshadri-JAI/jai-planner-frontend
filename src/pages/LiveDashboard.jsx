@@ -16,9 +16,23 @@ export default function LiveDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const live = await fetch(`${API}/live`).then(r => r.json());
-        const plan = await fetch(`${API}/plan-vs-actual?date=${today}`).then(r => r.json());
-        const trend = await fetch(`${API}/mt-trend`).then(r => r.json());
+        const token = localStorage.getItem("token");
+
+        const live = await fetch(`${API}/live`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }).then(r => r.json());
+        const plan = await fetch(`${API}/plan-vs-actual?date=${today}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }).then(r => r.json());
+        const trend = await fetch(`${API}/mt-trend`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }).then(r => r.json());
         setMtTrend(trend);
 
         setData(live);
