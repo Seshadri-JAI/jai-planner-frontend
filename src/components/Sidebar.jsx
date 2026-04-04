@@ -44,6 +44,10 @@ export default function Sidebar() {
             display: block;
             font-size: 14px;
             transition: all 0.2s ease;
+          
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
           }
 
           .nav-item:hover {
@@ -66,13 +70,15 @@ export default function Sidebar() {
 /* 🎨 STYLES */
 
 const container = {
-  width: 220,
+  width: window.innerWidth > 1600 ? 220 : 160,
+  flexShrink: 0,
   background: "#0f0f0f",
   color: "white",
   height: "100vh",
   display: "flex",
   flexDirection: "column",
   justifyContent: "space-between",
+  alignItems: "stretch",
   borderRight: "1px solid #222"
 };
 
@@ -83,15 +89,13 @@ const header = {
 
 const logo = {
   color: "#C8102E",
-  fontSize: 22,
-  fontWeight: "bold",
-  letterSpacing: 1
+  fontSize: 20,
+  fontWeight: "bold"
 };
 
 const subText = {
-  fontSize: 12,
-  opacity: 0.5,
-  marginTop: 4
+  fontSize: 11,
+  opacity: 0.6
 };
 
 const menu = {

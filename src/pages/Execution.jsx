@@ -1,10 +1,47 @@
 import { useEffect, useState, Fragment, useMemo } from "react";
 import Sidebar from "../components/Sidebar";
+import useScreenType from "../hooks/useScreenType";
 
 const API_BASE = import.meta.env.VITE_API_URL;
 const API = `${API_BASE}/planning`;
 
-const STAGES = ["RM", "SPVC", "BHT", "Parabolic", "HT", "Comp", "Paint"];
+const STAGES = ["RM", "Comp", "SPVC", "BHT", "Parabolic", "HT", "Paint"];
+
+const getContainer = (screenType) => ({
+  flex: 1,
+  background: "#0b0b0b",
+  color: "white",
+
+  padding: screenType === "tv" ? 25 : 10,
+
+  width: "100%",
+  minWidth: 0,            // ✅ GOOD (you already did)
+  overflow: "hidden",     // 🔥 ADD THIS
+
+  boxSizing: "border-box",
+
+  display: "flex",
+  flexDirection: "column",
+  gap: screenType === "tv" ? 20 : 10
+});
+
+const getTable = (screenType) => ({
+  width: "100%",
+  borderCollapse: "collapse",
+  fontSize: screenType === "tv" ? 18 : 13
+});
+
+const getInput = (screenType) => ({
+  width: screenType === "tv" ? 120 : 80,
+  padding: screenType === "tv" ? 8 : 4,
+  background: "#111",
+  color: "white"
+});
+
+const getActualInput = (screenType) => ({
+  ...getInput(screenType),
+  color: "#00ff88"
+});
 
 export default function ExecutionGrid() {
 
@@ -12,6 +49,7 @@ export default function ExecutionGrid() {
   const [criticalRows, setCriticalRows] = useState([]);
   const [locked, setLocked] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const screenType = useScreenType();
 
   const [date, setDate] = useState(
     new Date().toISOString().split("T")[0]
@@ -65,6 +103,8 @@ export default function ExecutionGrid() {
     });
     return result;
   }, [data]);
+
+
 
   // ------------------------
   // SAVE
@@ -124,10 +164,14 @@ export default function ExecutionGrid() {
   let lastLine = null;
 
   return (
-    <div style={{ display: "flex" }}>
+    <div style={{
+      display: "flex",
+      width: "100%",
+      overflow: "hidden"   // 🔥 CRITICAL
+    }}>
       <Sidebar />
 
-      <div style={container}>
+      <div style={getContainer(screenType)}>
 
         {/* HEADER */}
         <div style={header}>
@@ -150,144 +194,150 @@ export default function ExecutionGrid() {
 
         {/* MAIN TABLE */}
         <div style={card}>
-          <table style={table}>
-            <thead>
-              <tr>
-                <th>Part</th>
-                <th>Shift</th>
-                <th>Line</th>
-                <th>Plan</th>
-                <th>Assembly</th>
-                <th>QA</th>
-                <th>Assy Balance</th>
-                <th>QA Pending</th>
-                <th>MT</th>
-                {STAGES.map(s => <th key={s}>{s}</th>)}
-              </tr>
-            </thead>
+          <div style={{
+            overflowX: "auto",
+            width: "100%",
+            maxWidth: "100%"   // 🔥 ADD THIS
+          }}>
+            <table style={getTable(screenType)}>
+              <thead>
+                <tr>
+                  <th>Part</th>
+                  <th>Shift</th>
+                  <th>Line</th>
+                  <th>Plan</th>
+                  <th>Assembly</th>
+                  <th>QA</th>
+                  <th>Assy Balance</th>
+                  <th>QA Pending</th>
+                  <th>MT</th>
+                  {STAGES.map(s => <th key={s}>{s}</th>)}
+                </tr>
+              </thead>
 
-            <tbody>
-              {data.map((row, i) => {
+              <tbody>
+                {data.map((row, i) => {
 
-                const live = calculateLivePending(row);
+                  const live = calculateLivePending(row);
 
-                const showShiftHeader = row.shift !== lastShift;
-                if (showShiftHeader) lastLine = null;
+                  const showShiftHeader = row.shift !== lastShift;
+                  if (showShiftHeader) lastLine = null;
 
-                const showLineHeader = row.line !== lastLine;
+                  const showLineHeader = row.line !== lastLine;
 
-                lastShift = row.shift;
-                lastLine = row.line;
+                  lastShift = row.shift;
+                  lastLine = row.line;
 
-                return (
-                  <Fragment key={`${row.part_number}-${row.shift}`}>
+                  return (
+                    <Fragment key={`${row.part_number}-${row.shift}`}>
+  
+                      {showShiftHeader && (
+                        <tr>
+                          <td colSpan="100%" style={shiftHeader}>
+                            Shift {row.shift}
+                          </td>
+                        </tr>
+                      )}
 
-                    {showShiftHeader && (
+                      {showLineHeader && (
+                        <tr>
+                          <td colSpan="100%" style={lineHeader}>
+                            {row.line}
+                          </td>
+                        </tr>
+                      )}
+  
                       <tr>
-                        <td colSpan="100%" style={shiftHeader}>
-                          Shift {row.shift}
+                        <td>{row.part_number}</td>
+                        <td>{row.shift}</td>
+
+                        <td>
+                          <select
+                            value={row.line}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setData(prev =>
+                                prev.map((r, idx) =>
+                                  idx === i ? { ...r, line: value } : r
+                                )
+                              );
+                            }}
+                          >
+                            <option>Line 1 (Conv)</option>
+                            <option>Line 2 (HP)</option>
+                            <option>Line 3 (New)</option>
+                            <option>Line 4 (LP)</option>
+                          </select>
                         </td>
-                      </tr>
-                    )}
-
-                    {showLineHeader && (
-                      <tr>
-                        <td colSpan="100%" style={lineHeader}>
-                          {row.line}
-                        </td>
-                      </tr>
-                    )}
-
-                    <tr>
-                      <td>{row.part_number}</td>
-                      <td>{row.shift}</td>
-
-                      <td>
-                        <select
-                          value={row.line}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            setData(prev =>
-                              prev.map((r, idx) =>
-                                idx === i ? { ...r, line: value } : r
-                              )
-                            );
-                          }}
-                        >
-                          <option>Line 1 (Conv)</option>
-                          <option>Line 2 (HP)</option>
-                          <option>Line 3 (New)</option>
-                          <option>Line 4 (LP)</option>
-                        </select>
-                      </td>
-
-                      <td>{row.planned}</td>
-
-                      <td>
-                        <input
-                          type="number"
-                          value={row.actual || 0}
-                          disabled={locked}
-                          onChange={(e) => {
-                            const val = Number(e.target.value);
-                            setData(prev =>
-                              prev.map((r, idx) =>
-                                idx === i ? { ...r, actual: val } : r
-                              )
-                            );
-                          }}
-                          style={actualInput}
-                        />
-                      </td>
-
-                      <td>
-                        <input
-                          type="number"
-                          value={row.qa || 0}
-                          disabled={locked}
-                          onChange={(e) => {
-                            const val = Number(e.target.value);
-                            setData(prev =>
-                              prev.map((r, idx) =>
-                                idx === i ? { ...r, qa: val } : r
-                              )
-                            );
-                          }}
-                          style={actualInput}
-                        />
-                      </td>
-
-                      <td style={{ color: live.assy_pending > 0 ? "#ff4d4d" : "#00ff88" }}>
-                        {live.assy_pending}
-                      </td>
-
-                      <td style={{ color: live.qa_pending > 0 ? "orange" : "#00ff88" }}>
-                        {live.qa_pending}
-                      </td>
-
-                      <td>{(((row.qa || 0) * (row.weight || 0)) / 1000).toFixed(2)}</td>
-
-                      {STAGES.map(stage => (
-                        <td key={stage}>
+  
+                        <td>{row.planned}</td>
+  
+                        <td>
                           <input
-                            type="text"
-                            value={row.stages?.[stage] || ""}
+                            type="number"
+                            value={row.actual || 0}
                             disabled={locked}
                             onChange={(e) => {
-                              const updated = [...data];
-                              updated[i].stages[stage] = e.target.value;
-                              setData(updated);
+                              const val = Number(e.target.value);
+                              setData(prev =>
+                                prev.map((r, idx) =>
+                                  idx === i ? { ...r, actual: val } : r
+                                )
+                              );
                             }}
-                            style={input}
+                            style={getActualInput(screenType)}
                           />
                         </td>
-                      ))}
-                    </tr>
-                  </Fragment>
-                );
-              })}
-            </tbody>
-          </table>
+  
+                        <td>
+                          <input
+                            type="number"
+                            value={row.qa || 0}
+                            disabled={locked}
+                            onChange={(e) => {
+                              const val = Number(e.target.value);
+                              setData(prev =>
+                                prev.map((r, idx) =>
+                                  idx === i ? { ...r, qa: val } : r
+                                )
+                              );
+                            }}
+                            style={getActualInput(screenType)}
+                          />
+                        </td>
+  
+                        <td style={{ color: live.assy_pending > 0 ? "#ff4d4d" : "#00ff88" }}>
+                          {live.assy_pending}
+                        </td>
+  
+                        <td style={{ color: live.qa_pending > 0 ? "orange" : "#00ff88" }}>
+                          {live.qa_pending}
+                        </td>
+  
+                        <td>{(((row.qa || 0) * (row.weight || 0)) / 1000).toFixed(2)}</td>
+  
+                        {STAGES.map(stage => (
+                          <td key={stage}>
+                            <input
+                              type="text"
+                              value={row.stages?.[stage] || ""}
+                              disabled={locked}
+                              onChange={(e) => {
+                                const updated = [...data];
+                                updated[i].stages[stage] = e.target.value;
+                                setData(updated);
+                              }}
+                              style={getInput(screenType)}
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* LINE MT */}
@@ -313,43 +363,43 @@ export default function ExecutionGrid() {
 
         {/* CUSTOMER CRITICAL */}
         <div style={card}>
-          <h3>Customer Critical</h3>
+          <div style={{ overflowX: "auto" }}>
+            <h3>Customer Critical</h3>
+        
+            <table style={getTable(screenType)}>
+              <thead>
+                <tr>
+                  <th>Part</th>
+                  <th>Customer</th>
+                  <th>Qty</th>
+                  <th>Deadline</th>
+                  <th>Target</th>
+                  <th></th>
+                </tr>
+              </thead>
 
-          <table style={table}>
-            <thead>
-              <tr>
-                <th>Part</th>
-                <th>Customer</th>
-                <th>Qty</th>
-                <th>Deadline</th>
-                <th>Target</th>
-                <th></th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {criticalRows.map((row, i) => (
-                <tr key={i}>
-                  <td>
-                    <input
-                      value={row.part_number || ""}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setCriticalRows(prev =>
-                          prev.map((r, idx) =>
-                            idx === i ? { ...r, part_number: val } : r
-                          )
-                        );
-                      }}
-                    />
-                  </td>
-
-                  <td>
-                    <input
+              <tbody>
+                {criticalRows.map((row, i) => (
+                  <tr key={i}>
+                    <td>
+                      <input
+                        value={row.part_number || ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCriticalRows(prev =>
+                            prev.map((r, idx) =>
+                              idx === i ? { ...r, part_number: val } : r
+                            )
+                          );
+                        }}
+                      />
+                    </td>
+        
+                    <td>
+                      <input
                         value={row.customer || ""}
                         onChange={(e) => {
                           const val = e.target.value;
-                    
                           setCriticalRows(prev =>
                             prev.map((r, idx) =>
                               idx === i ? { ...r, customer: val } : r
@@ -357,70 +407,77 @@ export default function ExecutionGrid() {
                           );
                         }}
                       />
-                  </td>
-
-                  <td>
-                    <input
-                      type="number"
-                      value={row.quantity || 0}
-                      onChange={(e) => {
-                        const val = Number(e.target.value);
-                        setCriticalRows(prev =>
-                          prev.map((r, idx) =>
-                            idx === i ? { ...r, quantity: val } : r
+                    </td>
+        
+                    <td>
+                      <input
+                        type="number"
+                        value={row.quantity || 0}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setCriticalRows(prev =>
+                            prev.map((r, idx) =>
+                              idx === i ? { ...r, quantity: val } : r
+                            )
+                          );
+                        }}
+                      />
+                    </td>
+        
+                    <td>
+                      <input
+                        value={row.line_stoppage_deadline || ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCriticalRows(prev =>
+                            prev.map((r, idx) =>
+                              idx === i ? { ...r, line_stoppage_deadline: val } : r
+                            )
+                          );
+                        }}
+                      />
+                    </td>
+        
+                    <td>
+                      <input
+                        value={row.target_time || ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCriticalRows(prev =>
+                            prev.map((r, idx) =>
+                              idx === i ? { ...r, target_time: val } : r
+                            )
+                          );
+                        }}
+                      />
+                    </td>
+        
+                    <td>
+                      <button
+                        onClick={() =>
+                          setCriticalRows(prev =>
+                            prev.filter((_, idx) => idx !== i)
                           )
-                        );
-                      }}
-                    />
-                  </td>
+                        }
+                      >
+                        ❌
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+        
+            <button
+              onClick={() => setCriticalRows(prev => [...prev, {}])}
+              style={{ marginTop: 10 }}
+            >
+              + Add Row
+            </button>
+          </div>   {/* inner */}
+        </div>     {/* 🔥 OUTER — THIS WAS MISSING */}
 
-                  <td>
-                    <input
-                      value={row.line_stoppage_deadline || ""}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setCriticalRows(prev =>
-                          prev.map((r, idx) =>
-                            idx === i ? { ...r, line_stoppage_deadline: val } : r
-                          )
-                        );
-                      }}
-                    />
-                  </td>
-
-                  <td>
-                    <input
-                      value={row.target_time || ""}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setCriticalRows(prev =>
-                          prev.map((r, idx) =>
-                            idx === i ? { ...r, target_time: val } : r
-                          )
-                        );
-                      }}
-                    />
-                  </td>
-
-                  <td>
-                    <button onClick={() =>
-                      setCriticalRows(prev => prev.filter((_, idx) => idx !== i))
-                    }>
-                      ❌
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <button
-            onClick={() => setCriticalRows(prev => [...prev, {}])}
-            style={{ marginTop: 10 }}
-          >
-            + Add Row
-          </button>
-        </div>
+        {/* MODAL */}
         {showConfirm && (
           <div style={modalOverlay}>
             <div style={modalBox}>
@@ -431,7 +488,7 @@ export default function ExecutionGrid() {
                 <br /><br />
                 Pending quantities will be carried forward.
               </p>
-
+        
               <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
                 <button
                   onClick={() => setShowConfirm(false)}
@@ -465,7 +522,8 @@ export default function ExecutionGrid() {
 
 /* STYLES */
 
-const container = { flex: 1, background: "#0b0b0b", color: "white", padding: 20 };
+
+const container = { flex: 1, background: "#0b0b0b", color: "white", padding: 10 };
 const header = { display: "flex", justifyContent: "space-between" };
 const title = { color: "#C8102E" };
 const dateInput = { padding: 8, background: "#111", color: "white" };

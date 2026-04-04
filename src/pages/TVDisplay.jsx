@@ -19,6 +19,33 @@ export default function TVDisplay() {
   const [screen, setScreen] = useState(0);
   const [paused, setPaused] = useState(false);
 
+  useEffect(() => {
+    const enterFullscreen = async () => {
+      try {
+        if (!document.fullscreenElement) {
+          await document.documentElement.requestFullscreen();
+        }
+      } catch (err) {
+        console.log("Fullscreen blocked:", err);
+      }
+    };
+
+    // run once
+    enterFullscreen();
+
+    const handleExit = () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    };
+
+    document.addEventListener("fullscreenchange", handleExit);
+
+    return () => {
+    document.removeEventListener("fullscreenchange", handleExit);
+  };
+}, []);
+
   // Fetch data function
   const loadData = async () => {
     try {
@@ -209,12 +236,19 @@ export default function TVDisplay() {
           </div>
 
           {/* MT TREND GRAPH */}
-          <div style={{ height: "65vh" }}>
+          <div style={{ height: "55vh", paddingBottom: 20 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={mtTrend}>
+              <BarChart
+                data={mtTrend}
+                margin={{ top: 30, right: 20, left: 0, bottom: 60 }}
+              >
                 <CartesianGrid strokeDasharray="3 3" stroke="#333" />
       
-                <XAxis dataKey="date" />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fill: "#aaa", fontSize: 12 }}
+                  interval={0}
+                />
                 <YAxis />
       
                 <Tooltip />
@@ -335,7 +369,7 @@ const styles = {
   container: {
     display: "flex", flexDirection: "column",
     background: "#0b0b0b", color: "#fff",
-    width: "100%", height: "100vh", padding: 20,
+    width: "100%", height: "100vh", overflow: "hidden", padding: 20,
     boxSizing: "border-box", fontFamily: "sans-serif"
   },
   header: {
